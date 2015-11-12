@@ -111,12 +111,15 @@ dynamodb.scan(params, onScan);
 function onScan(err, data) {
     if (err) {
         console.error("Unable to scan the table. Error JSON:", JSON.stringify(err, null, 2));
+        logger.log("Unable to scan the table. Error JSON: " + JSON.stringify(err, null, 2));
         // ON provisioned throughput error then just pause and try again
         if (err.code === 'ProvisionedThroughputExceededException' || err.code === 'ThrottlingException') {
           Fiber(function() {
             sleep(10000);
           }).run();
           dynamodb.scan(params, onScan);
+        } else {
+          exit(1);
         }
 
     } else {
