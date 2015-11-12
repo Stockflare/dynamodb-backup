@@ -6,14 +6,16 @@
   "dependencies": {
     "aws-sdk": "^2.1.40",
     "commander": "^2.9.0",
+    "extend": "^2.0.0",
     "fast-csv": "^0.6.0",
+    "fibers": "^1.0.7",
+    "linq": "^3.0.4-beta",
     "mkdirp": "^0.5.1",
     "moment": "^2.10.6",
-    "underscore": "^1.8.3",
-    "extend": "^2.0.0",
-    "linq": "^3.0.4-beta",
     "q": "^1.1.2",
-    "rx": "^2.3.24"    
+    "rx": "^2.3.24",
+    "underscore": "^1.8.3",
+    "when": "^3.7.4"
   },
   "devDependencies": {
     "grunt": "0.4.*",
