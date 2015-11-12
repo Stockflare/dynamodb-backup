@@ -52,9 +52,9 @@ if (!_.isUndefined(program.logGroup)) {
   	// Shows the debugging messages
   	showDebugLogs: false, /* Default to false */
   	// Change the frequency of log upload, regardless of the batch size
-  	uploadMaxTimer: 1000, /* Defaults to 5000ms */
+  	uploadMaxTimer: 5000, /* Defaults to 5000ms */
   	// Max batch size. An upload will be triggered if this limit is reached within the max upload time
-  	uploadBatchSize: 10 /* Defaults to 500 */
+  	uploadBatchSize: 500 /* Defaults to 500 */
   });
 }
 
