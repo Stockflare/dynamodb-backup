@@ -14,6 +14,7 @@ var mkdirp = require('mkdirp');
 var path = require('path');
 var moment = require('moment');
 var csv = require('fast-csv');
+var Fiber = require('fibers');
 
 var folder = path.join('/stockflare/data', 'dynamodb_backup');
 
@@ -110,7 +111,14 @@ dynamodb.scan(params, onScan);
 function onScan(err, data) {
     if (err) {
         console.error("Unable to scan the table. Error JSON:", JSON.stringify(err, null, 2));
-        exit(1);
+        // ON provisioned throughput error then just pause and try again
+        if (err.code === 'ProvisionedThroughputExceededException') {
+          Fiber(function() {
+            sleep(10000);
+          }).run();
+          dynamodb.scan(params, onScan);
+        }
+
     } else {
         logger.log(program.logStream,"Scan succeeded.");
         data.Items.forEach(function(row) {
@@ -138,4 +146,12 @@ function exit(status) {
   setTimeout(function() {
       process.exit(status);
   }, (10 * 1000));
+}
+
+function sleep(ms) {
+    var fiber = Fiber.current;
+    setTimeout(function() {
+        fiber.run();
+    }, ms);
+    Fiber.yield();
 }
