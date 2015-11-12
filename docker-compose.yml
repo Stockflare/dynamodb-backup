@@ -1,0 +1,7 @@
+backup:
+  build: .
+  command: node worker.js
+  env_file:
+    - ./.env
+  volumes:
+    - .:/stockflare

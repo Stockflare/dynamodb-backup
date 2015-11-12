@@ -1,0 +1,15 @@
+image: stockflare/builder:0.0.2
+branches:
+  - master
+env:
+  - REGISTRY_ENDPOINT=$$registry_endpoint
+  - REGISTRY_REPO=$$registry_repo
+script:
+  - .drone/build.sh
+notify:
+  webhook:
+    urls:
+      - "https://webhooks.gitter.im/e/80b0b38eee5bbd71058d"
+    on_started: true
+    on_success: true
+    on_failure: true

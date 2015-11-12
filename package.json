@@ -1,0 +1,24 @@
+{
+  "name": "worker-ecs--cluster-config-file",
+  "description": "Provide AWS ECS based Config File Worker",
+  "version": "0.0.1",
+  "private": "true",
+  "dependencies": {
+    "aws-sdk": "^2.1.40",
+    "commander": "^2.9.0",
+    "fast-csv": "^0.6.0",
+    "mkdirp": "^0.5.1",
+    "moment": "^2.10.6",
+    "underscore": "^1.8.3",
+    "extend": "^2.0.0",
+    "linq": "^3.0.4-beta",
+    "q": "^1.1.2",
+    "rx": "^2.3.24"    
+  },
+  "devDependencies": {
+    "grunt": "0.4.*",
+    "grunt-pack": "0.1.*",
+    "npm": "^2.2.0"
+  },
+  "bundledDependencies": []
+}
