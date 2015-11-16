@@ -33,6 +33,8 @@ program
   .option('-l, --log-group [string]', 'CloudWatch Log Group to recive log entries, defaults to ${CLOUDWATCH_LOG_GROUP}', log_group_env)
   .option('-s, --log-stream [string]', 'CloudWatch Log Stream to recive log entries, defaults to ${CLOUDWATCH_LOG_STREAM}', log_stream_env)
   .option('-d, --decode', 'Decode the row data from Base64')
+  .option('-k, --kinesis-stream [string]', 'Kinesis Stream to process put requests, see lambda-dynamodb-put')
+  .option('-p, --partitions [string]', 'The number of partitions to use when sending to the Kinesis Stream, defaults to 10', "10")
   .option('-r, --region', 'Region for AWS API calls, defaults to ${BACKUP_FILE_BUCKET}', region_env)
   .parse(process.argv);
 
@@ -40,7 +42,9 @@ var s3 = new AWS.S3({
   region: program.region
 });
 
-var dynamodb = new AWS.DynamoDB({region: program.region});
+var kinesis = new AWS.Kinesis();
+
+var partitions = parseInt(program.partitions);
 
 // Greate the logger
 var logger = console;
@@ -84,72 +88,75 @@ var file = fs.createWriteStream(full_file_path);
 s3.getObject(s3_params).on('httpData', function(chunk) {
   file.write(chunk);
 }).on('httpDone', function() {
-  logger.log(program.logStream, "File downloaded, restoring to DynamoDB");
+  logger.log(program.logStream, "File downloaded, Sending Data to Kinesis");
   file.end();
 
-
-
-  // Read the CSV file and write to DynamoDB
+  // Read the CSV file and write to Kinesis
   var stream = fs.createReadStream(full_file_path);
   var counter = 0;
   var request = 0;
   var csvStream = csv()
       .on("data", function(data){
-        item = JSON.parse(data);
+        var item;
+        logger.log(program.logStream, data);
+        logger.log(program.logStream, "Before Parse");
         if (program.decode === true) {
-          item = JSON.parse(new Buffer(data, 'base64').to_string('utf8'));
+          text = new Buffer(data[0], 'base64').toString('utf8');
+          logger.log(program.logStream, text);
+          item = JSON.parse(text);
+        } else {
+          item = JSON.parse(data[0]);
         }
         logger.log(program.logStream, 'Record: ' + counter);
         logger.log(program.logStream, item);
         request = request + 1;
-
-        var saved = when.promise(function(resolve, reject, notify){
-          dynamodb.putItem( {
-            Item: item,
-            TableName: program.table
-          }, function(err, data){
-            if (err) {
-              reject(err);
-            } else {
-              resolve(data);
-            }
-          });
-        });
-        Fiber(function() {
-          while(saved.inspect().state === 'pending') {
-            sleep(1000);
-          }
-          saved.done(function(data){
-            logger.log(program.logStream, "Saved");
-          }, function(err){
-            logger.log(program.logStream, err);
-            exit(1);
-          });
-        }).run();
+        var shard = request % partitions;
+        var payload = {
+          TableName: program.table,
+          Item: item
+        };
+        kinesis.putRecord( {
+          StreamName: program.kinesisStream,
+          Data: JSON.stringify(payload),
+          PartitionKey: "partitionKey-" + shard
+        }).send();
+        // var saved = when.promise(function(resolve, reject, notify){
+        //   kinesis.putRecord( {
+        //     StreamName: program.kinesisStream,
+        //     Data: JSON.stringify(payload),
+        //     PartitionKey: "partitionKey-" + shard
+        //   }, function(err, data){
+        //     if (err) {
+        //       logger.log(program.logStream, JSON.stringify(err));
+        //       reject(err);
+        //     } else {
+        //       resolve(data);
+        //     }
+        //   });
+        // });
+        // Fiber(function() {
+        //   while(saved.inspect().state === 'pending') {
+        //     sleep(1000);
+        //   }
+        //   saved.done(function(data){
+        //     logger.log(program.logStream, "Saved");
+        //   }, function(err){
+        //     logger.log(program.logStream, err);
+        //     exit(1);
+        //   });
+        // }).run();
 
         counter = counter + 1;
 
       })
       .on("end", function(){
-        logger.log(program.logStream, "Restore to DynamoDB complete");
+        logger.log(program.logStream, "Data Load to Kenisis Complete");
         exit(0);
       });
 
       stream.pipe(csvStream);
 }).send();
 
-function saveItem(db, item, counter, callback) {
-  logger.log(program.logStream, db, item, counter);
-    logger.log(program.logStream, 'Writing item ' + counter);
-    db.putItem({
-      Item: item,
-      TableName: program.table
-    }, function(err, response){
-      logger.log(program.logStream, 'Item written ' + counter);
-      resolve('done');
-    });
-
-}
 
 function exit(status) {
   // make sure to sleep for 10 seconds so that logs flush
