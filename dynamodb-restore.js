@@ -95,6 +95,7 @@ s3.getObject(s3_params).on('httpData', function(chunk) {
   var stream = fs.createReadStream(full_file_path);
   var counter = 0;
   var request = 0;
+
   var csvStream = csv()
       .on("data", function(data){
         var item;
@@ -115,11 +116,19 @@ s3.getObject(s3_params).on('httpData', function(chunk) {
           TableName: program.table,
           Item: item
         };
-        kinesis.putRecord( {
-          StreamName: program.kinesisStream,
-          Data: JSON.stringify(payload),
-          PartitionKey: "partitionKey-" + shard
-        }).send();
+
+        (function(payload, shard){
+          kinesis.putRecord( {
+            StreamName: program.kinesisStream,
+            Data: JSON.stringify(payload),
+            PartitionKey: "partitionKey-" + shard
+          }).send();
+        })(payload, shard);
+        // kinesis.putRecord( {
+        //   StreamName: program.kinesisStream,
+        //   Data: JSON.stringify(payload),
+        //   PartitionKey: "partitionKey-" + shard
+        // }).send();
         // var saved = when.promise(function(resolve, reject, notify){
         //   kinesis.putRecord( {
         //     StreamName: program.kinesisStream,
@@ -157,6 +166,13 @@ s3.getObject(s3_params).on('httpData', function(chunk) {
       stream.pipe(csvStream);
 }).send();
 
+function putRecord(kinesis, payload, shard) {
+  kinesis.putRecord( {
+    StreamName: program.kinesisStream,
+    Data: JSON.stringify(payload),
+    PartitionKey: "partitionKey-" + shard
+  }).send();
+}
 
 function exit(status) {
   // make sure to sleep for 10 seconds so that logs flush
