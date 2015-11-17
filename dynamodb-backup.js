@@ -26,11 +26,11 @@ var lawgs = require('./aws_logger');
 program
   .version('0.0.1')
   .option('-t, --table [string]', 'DynamoDB Table to backup')
-  .option('-b, --bucket [string]', 'Bucket top upload backup file to, defaults to  ${BACKUP_FILE_BUCKET}', bucket_env)
-  .option('-l, --log-group [string]', 'CloudWatch Log Group to recive log entries, defaults to ${CLOUDWATCH_LOG_GROUP}', log_group_env)
-  .option('-s, --log-stream [string]', 'CloudWatch Log Stream to recive log entries, defaults to ${CLOUDWATCH_LOG_STREAM}', log_stream_env)
+  .option('-b, --bucket [string]', 'Bucket to upload backup file to, defaults to  ${BACKUP_FILE_BUCKET}', bucket_env)
+  .option('-l, --log-group [string]', 'CloudWatch Log Group to receive log entries, defaults to ${CLOUDWATCH_LOG_GROUP}', log_group_env)
+  .option('-s, --log-stream [string]', 'CloudWatch Log Stream to receive log entries, defaults to ${CLOUDWATCH_LOG_STREAM}', log_stream_env)
   .option('-e, --encode', 'Encode the row data in Base64')
-  .option('-r, --region', 'Region for AWS API calls, defaults to ${BACKUP_FILE_BUCKET}', region_env)
+  .option('-r, --region', 'Region for AWS API calls, defaults to ${AWS_REGION}', region_env)
   .parse(process.argv);
 
 var s3 = new AWS.S3({
