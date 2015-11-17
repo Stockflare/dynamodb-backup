@@ -1,1 +1,1 @@
-# DynamoDB Backup and restore
+# DynamoDB Backup
