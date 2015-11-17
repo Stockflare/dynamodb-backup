@@ -30,7 +30,6 @@ program
   .option('-b, --bucket [string]', 'Bucket to upload backup file to, defaults to  ${BACKUP_FILE_BUCKET}', bucket_env)
   .option('-l, --log-group [string]', 'CloudWatch Log Group to receive log entries, defaults to ${CLOUDWATCH_LOG_GROUP}', log_group_env)
   .option('-s, --log-stream [string]', 'CloudWatch Log Stream to receive log entries, defaults to ${CLOUDWATCH_LOG_STREAM}', log_stream_env)
-  .option('-e, --encode', 'Encode the row data in Base64, defaults to true', true)
   .option('-r, --region', 'Region for AWS API calls, defaults to ${AWS_REGION}', region_env)
   .parse(process.argv);
 
@@ -126,11 +125,7 @@ function onScan(err, data) {
     } else {
         logger.log(program.logStream,"Scan succeeded.");
         data.Items.forEach(function(row) {
-          if (program.encode === true) {
-            csvStream.write({row: new Buffer(JSON.stringify(row)).toString('base64')});
-          } else {
-            csvStream.write({row: JSON.stringify(row)});
-          }
+          csvStream.write({row: new Buffer(JSON.stringify(row)).toString('base64')});
         });
 
         // continue scanning if we have more movies
