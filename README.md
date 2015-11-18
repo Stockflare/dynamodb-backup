@@ -40,7 +40,9 @@ The CSV file has no headers and only has a single column (the item).
 
 The CSV file is saved locally and uploaded to the S3 bucket as:
 
-```<table_name>/<table_name>_<time_stamp>.csv```
+```
+<table_name>/<table_name>_<time_stamp>.csv
+```
 
 ## Cloudformation
 The provided cloudformation will create the S3 bucket and deploy a ECS Container Service Task Definition that can be used to schedule automated backups with https://github.com/Stockflare/lambda-scheduler
