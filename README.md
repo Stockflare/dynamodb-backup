@@ -14,15 +14,16 @@ Options:
 
   -h, --help                 output usage information
   -V, --version              output the version number
-  -t, --table [string]       DynamoDB Table to backup
+  -t, --table [string]       DynamoDB Table to backup, defaults to ${TABLE_NAME}
   -b, --bucket [string]      Bucket to upload backup file to, defaults to  ${BACKUP_FILE_BUCKET}
   -l, --log-group [string]   CloudWatch Log Group to receive log entries, defaults to ${CLOUDWATCH_LOG_GROUP}
   -s, --log-stream [string]  CloudWatch Log Stream to receive log entries, defaults to ${CLOUDWATCH_LOG_STREAM}
-  -e, --encode               Encode the row data in Base64
   -r, --region               Region for AWS API calls, defaults to ${AWS_REGION}
 
 ```
 The script will log to console if `CLOUDWATCH_LOG_GROUP` and `CLOUDWATCH_LOG_STREAM` are not provided.
+
+You will notice that all important parameters are defaulted from Environment variables.  This is to allow for easy launching from the Amazon AWS ECS Container Service console.
 
 ## Backup strategy
 The backup is intended solely for the purpose of restoring data to an identically structured DynamoDB table.
