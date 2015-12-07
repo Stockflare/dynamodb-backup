@@ -7,6 +7,7 @@ var region_env = process.env.AWS_REGION;
 var bucket_env  = process.env.BACKUP_FILE_BUCKET;
 var log_group_env = process.env.CLOUDWATCH_LOG_GROUP;
 var log_stream_env = process.env.CLOUDWATCH_LOG_STREAM;
+var table_name_env = process.env.TABLE_NAME;
 var AWS = require('aws-sdk');
 var _ = require('underscore');
 var fs = require('fs');
@@ -14,6 +15,7 @@ var mkdirp = require('mkdirp');
 var path = require('path');
 var moment = require('moment');
 var csv = require('fast-csv');
+var Fiber = require('fibers');
 
 var folder = path.join('/stockflare/data', 'dynamodb_backup');
 
@@ -24,12 +26,11 @@ var lawgs = require('./aws_logger');
 
 program
   .version('0.0.1')
-  .option('-t, --table [string]', 'DynamoDB Table to backup')
-  .option('-b, --bucket [string]', 'Bucket top upload backup file to, defaults to  ${BACKUP_FILE_BUCKET}', bucket_env)
-  .option('-l, --log-group [string]', 'CloudWatch Log Group to recive log entries, defaults to ${CLOUDWATCH_LOG_GROUP}', log_group_env)
-  .option('-s, --log-stream [string]', 'CloudWatch Log Stream to recive log entries, defaults to ${CLOUDWATCH_LOG_STREAM}', log_stream_env)
-  .option('-e, --encode', 'Encode the row data in Base64')
-  .option('-r, --region', 'Region for AWS API calls, defaults to ${BACKUP_FILE_BUCKET}', region_env)
+  .option('-t, --table [string]', 'DynamoDB Table to backup, defaults to ${TABLE_NAME}', table_name_env)
+  .option('-b, --bucket [string]', 'Bucket to upload backup file to, defaults to  ${BACKUP_FILE_BUCKET}', bucket_env)
+  .option('-l, --log-group [string]', 'CloudWatch Log Group to receive log entries, defaults to ${CLOUDWATCH_LOG_GROUP}', log_group_env)
+  .option('-s, --log-stream [string]', 'CloudWatch Log Stream to receive log entries, defaults to ${CLOUDWATCH_LOG_STREAM}', log_stream_env)
+  .option('-r, --region', 'Region for AWS API calls, defaults to ${AWS_REGION}', region_env)
   .parse(process.argv);
 
 var s3 = new AWS.S3({
@@ -51,9 +52,9 @@ if (!_.isUndefined(program.logGroup)) {
   	// Shows the debugging messages
   	showDebugLogs: false, /* Default to false */
   	// Change the frequency of log upload, regardless of the batch size
-  	uploadMaxTimer: 1000, /* Defaults to 5000ms */
+  	uploadMaxTimer: 5000, /* Defaults to 5000ms */
   	// Max batch size. An upload will be triggered if this limit is reached within the max upload time
-  	uploadBatchSize: 10 /* Defaults to 500 */
+  	uploadBatchSize: 500 /* Defaults to 500 */
   });
 }
 
@@ -110,15 +111,21 @@ dynamodb.scan(params, onScan);
 function onScan(err, data) {
     if (err) {
         console.error("Unable to scan the table. Error JSON:", JSON.stringify(err, null, 2));
-        exit(1);
+        logger.log(program.logStream, "Unable to scan the table. Error JSON: " + JSON.stringify(err, null, 2));
+        // ON provisioned throughput error then just pause and try again
+        if (err.code === 'ProvisionedThroughputExceededException' || err.code === 'ThrottlingException') {
+          Fiber(function() {
+            sleep(10000);
+          }).run();
+          dynamodb.scan(params, onScan);
+        } else {
+          exit(1);
+        }
+
     } else {
         logger.log(program.logStream,"Scan succeeded.");
         data.Items.forEach(function(row) {
-          if (program.encode === true) {
-            csvStream.write({row: new Buffer(JSON.stringify(row)).toString('base64')});
-          } else {
-            csvStream.write({row: JSON.stringify(row)});
-          }
+          csvStream.write({row: new Buffer(JSON.stringify(row)).toString('base64')});
         });
 
         // continue scanning if we have more movies
@@ -138,4 +145,12 @@ function exit(status) {
   setTimeout(function() {
       process.exit(status);
   }, (10 * 1000));
+}
+
+function sleep(ms) {
+    var fiber = Fiber.current;
+    setTimeout(function() {
+        fiber.run();
+    }, ms);
+    Fiber.yield();
 }
