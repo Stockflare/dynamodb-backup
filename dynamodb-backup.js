@@ -17,7 +17,8 @@ var moment = require('moment');
 var csv = require('fast-csv');
 var Fiber = require('fibers');
 
-var folder = path.join('/stockflare/data', 'dynamodb_backup');
+var folder_name = 'dynamodb_backup_' + moment().format();
+var folder = path.join('/stockflare/data', folder_name);
 
 
 var program = require('commander');
